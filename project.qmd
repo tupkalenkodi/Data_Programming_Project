@@ -1,0 +1,204 @@
+---
+title: "Data Programming"
+author: "Dmytro Tupkalenko"
+date: 05/29/2024
+format: 
+  html:
+    toc: true
+    toc_float: yes
+    embed-resources: true
+execute: 
+  warning: false
+  messages: false
+  echo: true
+  error: true
+bibliography: bibliography.bib
+---
+
+```{r}
+# import the libraries.
+library(readr)
+library(tidyverse)
+library(janitor)
+library(patchwork)
+```
+
+```{r}
+# read the data sets.
+terrorism_df <- read_csv("Terrorism.csv") 
+one_df <- read_csv("Number of wars the country was involved.csv")
+two_df <- read_csv("Number of casualties.csv")
+three_df <- read_csv("Number of wars.csv")
+```
+
+```{r}
+# select columns that are needed, clean the names and the data.
+terrorism_selected_df = terrorism_df |> 
+  dplyr::rename(terrorist_act_year = iyear, 
+                state_happened = country_txt, 
+                perpetrators_nationality = natlty1_txt) |> 
+  dplyr::select(state_happened, terrorist_act_year, perpetrators_nationality) |> 
+  filter(between(terrorist_act_year, 1989, 2017))
+
+one_selected_df = one_df |> 
+  clean_names() |> 
+  dplyr::rename(state_happened = state, number_of_conflicts_involved = conflicts) |> 
+  dplyr::select(state_happened, number_of_conflicts_involved) 
+
+two_first_selected_df = two_df |> 
+  clean_names() |> 
+  dplyr::rename(state_happened = country,
+                conflict_year = year,
+                number_of_casualties =   deaths_in_ongoing_conflicts_in_a_country_best_estimate_conflict_type_all) |> 
+  dplyr::select(state_happened, conflict_year, number_of_casualties) |> 
+  filter(between(conflict_year, 1989, 2017)) |> 
+  pivot_wider(
+    names_from = conflict_year,
+    values_from = number_of_casualties
+  )
+
+two_second_selected_df = two_df |> 
+  clean_names() |> 
+  dplyr::rename(state_happened = country,
+                conflict_year = year,
+                number_of_casualties =   deaths_in_ongoing_conflicts_in_a_country_best_estimate_conflict_type_all) |> 
+  dplyr::select(state_happened, conflict_year, number_of_casualties) |>
+  filter(state_happened == "Iraq") |> 
+  filter(between(conflict_year, 1989, 2017)) 
+  
+
+three_selected_df = three_df |> 
+  clean_names() |> 
+  mutate(year = year(ymd(start_date))) |> 
+  dplyr::rename(conflict_year = year) |> 
+  dplyr::select(conflict, conflict_year) |> 
+  filter(between(conflict_year, 1989, 2017))
+```
+
+```{r}
+terrorism_selected_df |>  as_tibble()
+one_selected_df |> as_tibble()
+two_first_selected_df |>  as_tibble()
+three_selected_df |> as_tibble()
+```
+
+```{r}
+# (i).
+# find number of terrorist acts per country.
+number_of_terrorist_acts_per_country = terrorism_selected_df |> 
+  count(.by = state_happened) |> 
+  rename(state_happened = ".by", number_of_terrorist_acts = n)
+
+# join with df corresponding to number of conflicts the country was involved.
+df1 = inner_join(one_selected_df, number_of_terrorist_acts_per_country, 
+                by = "state_happened")
+
+# create a scatter plot showing a correlation between number of wars involved and 
+# the number of terrorist acts.
+df1 |> ggplot(aes(x = number_of_conflicts_involved, y = number_of_terrorist_acts)) +
+  geom_point() +
+  geom_smooth(method = "lm", formula = y ~ x, se = FALSE, color = "#de1457") + 
+  labs(title = "Correlation between Number of Conflicts and Number of Terrorist Acts",
+       x = "Number of Conflicts Involved",
+       y = "Number of Terrorist Acts") +
+  theme_minimal()
+```
+
+```{r}
+# (ii.1).
+# find the number of terrorist acts per nationality of the perpetrator.
+number_of_terrorist_acts_per_terrorist_nationality = terrorism_selected_df |> 
+  count(.by = perpetrators_nationality) |> 
+  rename(perpetrators_nationality = ".by", number_of_terrorist_acts = n)
+
+# find the number of all casualties in all conflicts per country.
+number_of_casualties_per_country = two_first_selected_df |> 
+  mutate(all_casualties = rowSums(two_first_selected_df[, -1])) |> 
+  select(state_happened, all_casualties)
+  
+# join them by state_happened.
+df2 = inner_join(number_of_terrorist_acts_per_terrorist_nationality,
+                  number_of_casualties_per_country,
+                  by = c("perpetrators_nationality" = "state_happened"))
+
+# create a scatter plot showing a correlation between number casualties in the home country of the perpetrator and the number of terrorist acts.
+df2 |> ggplot(aes(x = all_casualties, y = number_of_terrorist_acts)) +
+  geom_point() +
+  geom_smooth(method = "lm", formula = y ~ x, se = FALSE, color = "#de1457") + 
+  labs(title = "Correlation between casualties in the home country of the perpetrator and Number of Terrorist Acts",
+       x = "Number of casualties in the home country",
+       y = "Number of Terrorist Acts") +
+  theme_minimal()
+```
+
+```{r}
+# (ii.2).
+# case study: the biggest number of terrorist acts performed by people of one nationality - Iraq:
+
+# create two bar plots.
+
+# first representing number of casualties per year. 
+plot1 = two_second_selected_df |>  
+  ggplot(aes(x = conflict_year, y = number_of_casualties)) +
+  geom_bar(stat = "identity") +
+  labs(title = "Number of Casualties per Year in Iraq",
+       x = "Year",
+       y = "Number of Casualties")
+
+# and the second representing number of terrorist acts per year.
+df3 = terrorism_selected_df |> 
+  filter(perpetrators_nationality == "Iraq") |> 
+  count(.by = terrorist_act_year) |> 
+  rename(terrorist_act_year = ".by", number_of_terrorist_acts = "n")
+
+plot2 = df3 |> 
+  ggplot(aes(x = terrorist_act_year, y = number_of_terrorist_acts)) +
+  geom_bar(stat = "identity") +
+  labs(title = "Number of terrorist acts performed by Iranians",
+       x = "Year",
+       y = "Number of terroris acts")
+
+# show them side-by-side
+plot1 | plot2
+```
+
+```{r}
+# (iii). 
+# general correlations between number of wars and number of terrorist acts.
+df4 <- terrorism_selected_df |> 
+  count(.by = terrorist_act_year) |> 
+  rename(terrorist_act_year = ".by", number_of_terrorist_acts = "n")
+
+df5 <- three_selected_df |> 
+  count(.by = conflict_year) |> 
+  rename(conflict_year = ".by", number_of_wars = "n")
+
+df6 <- inner_join(df4, df5, 
+                 by = c("terrorist_act_year" = "conflict_year"))
+
+# First plot: Number of terrorist acts over years
+plot1 <- df6 |> ggplot(aes(x = terrorist_act_year, y = number_of_terrorist_acts)) + 
+  geom_line(color = "blue", size = 1.2) +
+  labs(x = "Year", y = "Number of Terrorist Acts",  
+       title = "Correlation between Number of Wars and Number of Terrorist Acts",
+       subtitle = "Number of Terrorist Acts Over Years") +
+  theme_minimal()
+
+# Second plot: Number of wars over years
+plot2 <- df6 |> ggplot(aes(x = terrorist_act_year, y = number_of_wars)) +
+  geom_line(color = "red", size = 1.2) +
+  labs(x = "Year", y = "Number of Wars",  
+       subtitle = "Number of Wars Over Years") +
+  theme_minimal()
+
+# Third plot: Scatter plot with linear regression line
+plot3 <- df6 |> ggplot(aes(x = number_of_wars, y = number_of_terrorist_acts)) +
+  geom_point(color = "black") +
+  geom_smooth(method = "lm", formula = y ~ x, se = FALSE, color = "#de1457") +
+  labs(x = "Number of Wars", y = "Number of Terrorist Acts",
+       subtitle = "Scatter Plot with Linear Regression Line") +
+  theme_minimal()
+
+# Arrange plots horizontally and vertically
+(plot1 | plot2) / plot3
+```
