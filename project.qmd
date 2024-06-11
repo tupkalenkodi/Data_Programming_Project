@@ -1,19 +1,53 @@
 ---
-title: "Data Programming"
 author: "Dmytro Tupkalenko"
-date: 05/29/2024
+date: 06/11/2024
 format: 
   html:
     toc: true
     toc_float: yes
+    toc_depth: 3
     embed-resources: true
+    code-fold: true
+    theme: "lux"
 execute: 
   warning: false
   messages: false
   echo: true
-  error: true
+  error: false
 bibliography: bibliography.bib
 ---
+
+# Study of the Correlation Between Global Terrorism and War Conflicts
+:::{.grid}
+
+::: {.g-col-6}
+![Photo by <a href="https://unsplash.com/@maculan?utm_content=creditCopyText&utm_medium=referral&utm_source=unsplash">Julien Maculan</a> on <a href="https://unsplash.com/photos/a-black-and-white-photo-of-a-city-skyline-jvENe-9G-JY?utm_content=creditCopyText&utm_medium=referral&utm_source=unsplash">Unsplash</a>
+  ](./julien-maculan-jvENe-9G-JY-unsplash.jpg)
+:::
+
+::: {.g-col-6}
+![Photo by <a href="https://unsplash.com/@levimeirclancy?utm_content=creditCopyText&utm_medium=referral&utm_source=unsplash">Levi Meir Clancy</a> on <a href="https://unsplash.com/photos/grayscale-photo-of-concrete-houses-LheHIV3XpGM?utm_content=creditCopyText&utm_medium=referral&utm_source=unsplash">Unsplash</a>
+  ](./levi-meir-clancy-LheHIV3XpGM-unsplash.jpg)
+:::
+
+:::
+## Introduction
+
+Global terrorism is one of the most significant security and moral concerns in the modern world. Terrorist attacks frequently dominate news headlines, especially when hostages are involved or people's lives are under the threat. But what drives individuals to commit such acts of terror? Humanity has witnessed a lot of incredibly violent and destructive actions, raising the question: Is this behavior rooted in human nature, or is it the result of a series of life events that push individuals toward such extremes?
+
+In this article, we aim to explore one potential factor in this sequence of events - war. Specifically, we will examine whether there is a correlation between:
+
+1.  The number of wars started and the number of terrorist acts committed per year.
+
+2.  The number of wars a country has been involved in and the number of terrorist acts that have occurred within the country.
+
+3.  The nationality of terrorist and the number of casualties from wars in the terrorist's home country.
+
+## Datasets used
+
+::: callout-note
+For transparency and reproducibility - in this article all the code (in R) is provided and datasets used are referenced.
+:::
 
 ```{r}
 # import the libraries.
@@ -21,17 +55,16 @@ library(readr)
 library(tidyverse)
 library(janitor)
 library(patchwork)
-```
+library(knitr)
 
-```{r}
+
 # read the data sets.
-terrorism_df <- read_csv("Terrorism.csv") 
-one_df <- read_csv("Number of wars the country was involved.csv")
-two_df <- read_csv("Number of casualties.csv")
-three_df <- read_csv("Number of wars.csv")
-```
+terrorism_df = read_csv("Terrorism.csv") 
+one_df = read_csv("Number of wars the country was involved.csv")
+two_df = read_csv("Number of casualties.csv")
+three_df = read_csv("Number of wars.csv")
 
-```{r}
+
 # select columns that are needed, clean the names and the data.
 terrorism_selected_df = terrorism_df |> 
   dplyr::rename(terrorist_act_year = iyear, 
@@ -66,7 +99,6 @@ two_second_selected_df = two_df |>
   filter(state_happened == "Iraq") |> 
   filter(between(conflict_year, 1989, 2017)) 
   
-
 three_selected_df = three_df |> 
   clean_names() |> 
   mutate(year = year(ymd(start_date))) |> 
@@ -75,130 +107,255 @@ three_selected_df = three_df |>
   filter(between(conflict_year, 1989, 2017))
 ```
 
-```{r}
-terrorism_selected_df |>  as_tibble()
-one_selected_df |> as_tibble()
-two_first_selected_df |>  as_tibble()
-three_selected_df |> as_tibble()
-```
+::: callout-important
+The data was restricted to the common period of time from 1989 to 2017 for all datasets except [@WAR]/participants - from 1946 to 2015.
+:::
+
+### Global Terrorism Database [@GTD]
+
+Information on more than 180,000 Terrorist Attacks.
+
+**The Global Terrorism Database (GTD) is an open-source database including information on terrorist attacks around the world from 1970 through 2017. Selected columns are:**
+
+-   state_happened - name of the state (country) where the terrorist act took place.
+
+-   terrorist_act_year - year the terrorist act took place.
+
+-   perpetrators_nationality - nationality of the assaulter.
 
 ```{r}
-# (i).
+# display the data.
+terrorism_selected_df |> 
+  sample_n(7) |> 
+  kable(caption = "Information on Terrorist Attacks")
+```
+
+### WAR! conflicts and nations who took part in them [@WAR]
+
+A dataset of all wars and nations who fought in them.
+
+**A list of sovereign nations that took part in any war since 1946. Selected columns are:**
+
+-   state_happened - name of the state (country) which took part in the conflicts.
+
+-   number_of_conflicts_involved - number of the conflicts (wars) the state (country) has been involved.
+
+```{r}
+# display the data.
+one_selected_df |> 
+  sample_n(7) |> 
+  kable(caption = "Sovereign Nations Involved in Wars")
+```
+
+**A list of all wars (as defined by Wikipedia) who had at least one sovereign nation fight in it. Selected columns are:**
+
+-   conflict - name of the conflict (war).
+
+-   conflict_year - year the conflict (war) started.
+
+```{r}
+# display the data.
+three_selected_df |> 
+  sample_n(7) |> 
+  kable(caption = "List of Wars with Sovereign Nation Participation")
+```
+
+### Countries in Conflict Dataset (1989-2022) [@CIC]
+
+**This dataset offers insights into countries experiencing ongoing conflicts, providing estimates of fatalities resulting from these conflicts across various years. It serves as a valuable resource for understanding the global landscape of conflict and its human toll. Selected columns are:**
+
+-   state_happened - name of the state (country) experiencing the conflict.
+
+-   year - year of data collection.
+
+-   number_of_casualties - best estimate of fatalities attributed to ongoing conflicts (wars) in the respective state (country) for the given year.
+
+```{r}
+# display the data.
+two_df |>  
+  rename(state_happened = Country, year = Year, number_of_casualties = "Deaths in ongoing conflicts in a country (best estimate) - Conflict type: all") |> 
+  select(state_happened, year, number_of_casualties) |> 
+  sample_n(7) |> 
+  kable(caption = "Insights into Conflicts and Casualties by country")
+```
+
+## (i). Correlation between number of wars started and the number of terrorist acts committed per year
+
+Let us start by exploring the general interconnections between number of wars and the number of terrorist acts by firstly examining the occurrences of terrorist acts and the initiation of wars over time independently, and then if there is a dependence between them.
+
+```{r}
+# (i). 
+# general correlations between number of wars and the number of terrorist acts.
+
+
+# prepare the data frames.
+df1 = terrorism_selected_df |> 
+  count(.by = terrorist_act_year) |> 
+  rename(terrorist_act_year = ".by", number_of_terrorist_acts = "n")
+
+df2 = three_selected_df |> 
+  count(.by = conflict_year) |> 
+  rename(conflict_year = ".by", number_of_wars = "n")
+
+df3 = inner_join(df1, df2, 
+                 by = c("terrorist_act_year" = "conflict_year"))
+
+
+# First plot: line plot of the number of terrorist acts over years.
+plot1 = df3 |> 
+  ggplot(aes(x = terrorist_act_year, y = number_of_terrorist_acts)) + 
+  geom_line(color = "blue", linewidth = 1.2) +
+  labs(x = "Year", 
+       y = "Number of Terrorist Acts",  
+       title = "Correlation between Number of Wars and the Number of Terrorist Acts",
+       subtitle = "Number of Terrorist Acts Over Years") +
+  theme_minimal()
+
+
+# Second plot: line plot of the number of wars over years.
+plot2 = df3 |> 
+  ggplot(aes(x = terrorist_act_year, y = number_of_wars)) +
+  geom_line(color = "red", linewidth = 1.2) +
+  labs(x = "Year", 
+       y = "Number of Wars",  
+       subtitle = "Number of Wars Over Years") +
+  theme_minimal()
+
+
+# Third plot: bar plot between number of wars and the number of terrorist acts.
+plot3 = df3 |> 
+  group_by(number_of_wars) |> 
+  summarize(total_terrorist_acts = sum(number_of_terrorist_acts)) |> 
+  ggplot(aes(x = number_of_wars, y = total_terrorist_acts)) +
+  geom_bar(stat = "identity") +
+  labs(x = "Number of Wars", 
+       y = "Number of Terrorist Acts") +
+  theme_minimal()
+
+
+# Arrange the plots together.
+(plot1 | plot2) / plot3
+```
+
+Based on the plots, we can see that there is no strong correlation between the number of wars initiated and the number of terrorist acts committed in the given year. This is indicated by the observation that, even though there are oscillations in the number of wars, the number of occurrences of terrorist acts increases over time.
+
+But there might be some specific aspects related to war that correlate with the number of terrorist acts. That is what we will explore in the following subsections.
+
+## (ii). Correlation between number of wars a country has been involved in and the number of terrorist acts that have occurred within the country
+
+In this subsection, we investigate the relationship between the number of wars a country has participated in and the frequency of terrorist acts within that country. 
+
+```{r}
+# (ii). 
+# the number of wars a country has been involved in and the number of terrorist acts that have occurred in that country
+
+
 # find number of terrorist acts per country.
 number_of_terrorist_acts_per_country = terrorism_selected_df |> 
   count(.by = state_happened) |> 
   rename(state_happened = ".by", number_of_terrorist_acts = n)
 
-# join with df corresponding to number of conflicts the country was involved.
-df1 = inner_join(one_selected_df, number_of_terrorist_acts_per_country, 
+
+# join the data frames by state_happened.
+df4 = inner_join(one_selected_df, number_of_terrorist_acts_per_country, 
                 by = "state_happened")
 
-# create a scatter plot showing a correlation between number of wars involved and 
-# the number of terrorist acts.
-df1 |> ggplot(aes(x = number_of_conflicts_involved, y = number_of_terrorist_acts)) +
+
+# create a scatter plot showing between number of wars involved and the number of terrorist acts.
+df4 |> ggplot(aes(x = number_of_conflicts_involved, y = number_of_terrorist_acts)) +
   geom_point() +
-  geom_smooth(method = "lm", formula = y ~ x, se = FALSE, color = "#de1457") + 
-  labs(title = "Correlation between Number of Conflicts and Number of Terrorist Acts",
-       x = "Number of Conflicts Involved",
-       y = "Number of Terrorist Acts") +
+  geom_smooth(method = "lm", formula = y ~ x, se = FALSE, color = "#de1457", linewidth=1.2) + 
+  labs(x = "Number of Conflicts Involved",
+       y = "Number of Terrorist Acts",
+       title = "Correlation between Number of Conflicts and Number of Terrorist Acts") +
   theme_minimal()
 ```
 
+The plot indicates a positive correlation, that is, the bigger the number of wars - the bigger the number of acts. But we should also notice that this correlation is not particularly strong. This suggests that while involvement in conflicts may contribute to an increase in terrorist activities, other factors might play a bigger role. 
+
+So let us study one factor that even though is intuitively less relevant, appears to have much stronger correlation.
+
+
+
+## (iii). Correlation between nationality of terrorist and the number of casualties from wars in the terrorist's home country
+
+Let us now look whether the number of people who died from war actions in a terrorist's home country has an impact. From the author's prospective, this is relevant because some of the terrorist acts are claimed to be a retaliation for actions in their home country made by, for example, the government of the country in which the terrorist act occurs. 
+
+An example of such act is Moscow theater hostage crisis in 2002, resulting in the taking of 912 hostages. The attackers, led by Movsar Barayev, demanded the withdrawal of Russian forces from Chechnya and an end to the Second Chechen War. [@MT2002]
+
 ```{r}
-# (ii.1).
+# (iii.1).
+
 # find the number of terrorist acts per nationality of the perpetrator.
 number_of_terrorist_acts_per_terrorist_nationality = terrorism_selected_df |> 
   count(.by = perpetrators_nationality) |> 
   rename(perpetrators_nationality = ".by", number_of_terrorist_acts = n)
+
 
 # find the number of all casualties in all conflicts per country.
 number_of_casualties_per_country = two_first_selected_df |> 
   mutate(all_casualties = rowSums(two_first_selected_df[, -1])) |> 
   select(state_happened, all_casualties)
   
-# join them by state_happened.
-df2 = inner_join(number_of_terrorist_acts_per_terrorist_nationality,
+
+# join the data frame by state_happened.
+df5 = inner_join(number_of_terrorist_acts_per_terrorist_nationality,
                   number_of_casualties_per_country,
                   by = c("perpetrators_nationality" = "state_happened"))
 
-# create a scatter plot showing a correlation between number casualties in the home country of the perpetrator and the number of terrorist acts.
-df2 |> ggplot(aes(x = all_casualties, y = number_of_terrorist_acts)) +
+
+# create a scatter plot between number of casualties in the home country and the number of terrorist acts.
+df5 |> ggplot(aes(x = all_casualties, y = number_of_terrorist_acts)) +
   geom_point() +
-  geom_smooth(method = "lm", formula = y ~ x, se = FALSE, color = "#de1457") + 
-  labs(title = "Correlation between casualties in the home country of the perpetrator and Number of Terrorist Acts",
-       x = "Number of casualties in the home country",
-       y = "Number of Terrorist Acts") +
+  geom_smooth(method = "lm", formula = y ~ x, se = FALSE, color = "#de1457", size = 1.2) +
+  labs(x = "Number of casualties in the home country",
+       y = "Number of Terrorist Acts",
+       title = "Perpetrator's Home Country Casualties vs. Number of Terrorist Acts") +
   theme_minimal()
 ```
 
+As we can see from the plot, the correlation is positive, and it is much stronger that in the previous study. 
+
+Since the correlation is the strongest from all we have seen, let us  make a case study on the nationality with the highest number of terrorist acts - Iraq, to prove or disprove the strength of the correlation.
+
+
+
 ```{r}
-# (ii.2).
+# (iii.2).
 # case study: the biggest number of terrorist acts performed by people of one nationality - Iraq:
 
-# create two bar plots.
 
-# first representing number of casualties per year. 
-plot1 = two_second_selected_df |>  
+# First plot: bar plot of the number of casualties per year.
+plot4 = two_second_selected_df |>  
   ggplot(aes(x = conflict_year, y = number_of_casualties)) +
   geom_bar(stat = "identity") +
-  labs(title = "Number of Casualties per Year in Iraq",
-       x = "Year",
-       y = "Number of Casualties")
+  labs(x = "Year",
+       y = "Number of Casualties",
+       title = "(Iraq) Number of Casualties vs. Number of terrorist acts conducted", 
+       subtitle = "Number of Casualties per Year in Iraq")
 
-# and the second representing number of terrorist acts per year.
-df3 = terrorism_selected_df |> 
+
+# Second plot: bar plot of the number of terrorist acts per year.
+df6 = terrorism_selected_df |> 
   filter(perpetrators_nationality == "Iraq") |> 
   count(.by = terrorist_act_year) |> 
   rename(terrorist_act_year = ".by", number_of_terrorist_acts = "n")
 
-plot2 = df3 |> 
+plot5 = df6 |> 
   ggplot(aes(x = terrorist_act_year, y = number_of_terrorist_acts)) +
   geom_bar(stat = "identity") +
-  labs(title = "Number of terrorist acts performed by Iranians",
-       x = "Year",
-       y = "Number of terroris acts")
+  labs(x = "Year",
+       y = "Number of terroris acts",
+       subtitle = "Number of terrorist acts conducted by Iraqis per year")
 
-# show them side-by-side
-plot1 | plot2
+
+# Arrange the plots together.
+plot4 / plot5
 ```
 
-```{r}
-# (iii). 
-# general correlations between number of wars and number of terrorist acts.
-df4 <- terrorism_selected_df |> 
-  count(.by = terrorist_act_year) |> 
-  rename(terrorist_act_year = ".by", number_of_terrorist_acts = "n")
+As we can see this case agrees with the general correlation study - from 2010 there was an increase in number of casualties as well as the number of terrorist acts committed, proving the strength of general conclusion.
 
-df5 <- three_selected_df |> 
-  count(.by = conflict_year) |> 
-  rename(conflict_year = ".by", number_of_wars = "n")
+## Conclusions
+In summary, while the involvement of a country in wars does have some impact on the number of terrorist acts within its borders, the most significant factor we could identify is the number of casualties resulting from conflicts in the terrorist's home country. This points to the possibility that individuals from war-torn regions may be more likely to resort to terrorism, potentially as a form of retaliation or due to the horrible circumstances created by violence.
 
-df6 <- inner_join(df4, df5, 
-                 by = c("terrorist_act_year" = "conflict_year"))
-
-# First plot: Number of terrorist acts over years
-plot1 <- df6 |> ggplot(aes(x = terrorist_act_year, y = number_of_terrorist_acts)) + 
-  geom_line(color = "blue", size = 1.2) +
-  labs(x = "Year", y = "Number of Terrorist Acts",  
-       title = "Correlation between Number of Wars and Number of Terrorist Acts",
-       subtitle = "Number of Terrorist Acts Over Years") +
-  theme_minimal()
-
-# Second plot: Number of wars over years
-plot2 <- df6 |> ggplot(aes(x = terrorist_act_year, y = number_of_wars)) +
-  geom_line(color = "red", size = 1.2) +
-  labs(x = "Year", y = "Number of Wars",  
-       subtitle = "Number of Wars Over Years") +
-  theme_minimal()
-
-# Third plot: Scatter plot with linear regression line
-plot3 <- df6 |> ggplot(aes(x = number_of_wars, y = number_of_terrorist_acts)) +
-  geom_point(color = "black") +
-  geom_smooth(method = "lm", formula = y ~ x, se = FALSE, color = "#de1457") +
-  labs(x = "Number of Wars", y = "Number of Terrorist Acts",
-       subtitle = "Scatter Plot with Linear Regression Line") +
-  theme_minimal()
-
-# Arrange plots horizontally and vertically
-(plot1 | plot2) / plot3
-```
+From author's point of view these findings highlight that there is indeed some dependence between war and terrorism, suggesting that by valuing the price of life of any individual and considering all the potential casualties before getting involved into the conflict could be a crucial step in reducing the frequency of terrorism globally and hence a big contribution to the global peace and security.
